@@ -120,6 +120,7 @@ titanic_df_tr = pd.DataFrame(X, columns=titanic_df_num.columns, index=titanic_df
 
 titanic_df_cat = titanic_df[['Sex', 'Embarked']]
 titanic_df_cat.fillna(method='ffill', inplace=True)
+titanic_df[['Sex', 'Embarked']] = titanic_df[['Sex', 'Embarked']].fillna(method='ffill')
 
 from sklearn.preprocessing import OneHotEncoder
 
@@ -130,7 +131,7 @@ titanic_df_1hot
 from sklearn.base import BaseEstimator, TransformerMixin
 
 # column index
-sibsp_ix, parch_ix, fare_ix = 5, 6, 8
+sibsp_ix, parch_ix, fare_ix = 3, 4, 5
 
 
 class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
@@ -149,12 +150,71 @@ class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
             return np.c_[X, sibsp_parch]
 
 
-attr_adder = CombinedAttributesAdder(add_fare_per_sibspparch=False)
-titanic_df_extra_attribs = attr_adder.transform(titanic_df.values)
+# attr_adder = CombinedAttributesAdder(add_fare_per_sibspparch=False)
+# titanic_df_extra_attribs = attr_adder.transform(titanic_df_num.values)
+#
+# titanic_df_extra_attribs = pd.DataFrame(
+#     titanic_df_extra_attribs,
+#     columns=list(titanic_df.columns) + ['sibsp_parch'],
+#     index=titanic_df.index)
+#
+# titanic_df_extra_attribs.head()
 
-titanic_df_extra_attribs = pd.DataFrame(
-    titanic_df_extra_attribs,
-    columns=list(titanic_df.columns) + ['sibsp_parch'],
-    index=titanic_df.index)
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-titanic_df_extra_attribs.head()
+num_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy="median")),
+    ('attribs_adder', CombinedAttributesAdder()),
+    ('std_scaler', StandardScaler()),
+])
+
+titanic_df_num_tr = num_pipeline.fit_transform(titanic_df_num)
+
+from sklearn.compose import ColumnTransformer
+
+num_attribs = list(titanic_df_num)
+cat_attribs = ['Sex', 'Embarked']
+
+full_pipeline = ColumnTransformer([
+    ("num", num_pipeline, num_attribs),
+    ("cat", OneHotEncoder(), cat_attribs),
+])
+
+titanic_df_prepared = full_pipeline.fit_transform(titanic_df)
+titanic_df_prepared
+
+from sklearn.linear_model import LinearRegression
+
+lin_reg = LinearRegression()
+lin_reg.fit(titanic_df_prepared, titanic_df_labels)
+
+# let's try the full preprocessing pipeline on a few training instances
+some_data = titanic_df.iloc[:5]
+some_labels = titanic_df_labels.iloc[:5]
+some_data_prepared = full_pipeline.transform(some_data)
+
+print("Predictions:", lin_reg.predict(some_data_prepared))
+print("Labels:", list(some_labels))
+
+from sklearn.metrics import mean_squared_error
+
+housing_predictions = lin_reg.predict(titanic_df_prepared)
+lin_mse = mean_squared_error(titanic_df_labels, housing_predictions)
+lin_rmse = np.sqrt(lin_mse)
+lin_rmse
+
+from sklearn.metrics import mean_absolute_error
+
+lin_mae = mean_absolute_error(titanic_df_labels, housing_predictions)
+lin_mae
+
+from sklearn.tree import DecisionTreeRegressor
+
+tree_reg = DecisionTreeRegressor(random_state=42)
+tree_reg.fit(titanic_df_prepared, titanic_df_labels)
+
+titanic_predictions = tree_reg.predict(titanic_df_prepared)
+tree_mse = mean_squared_error(titanic_df_labels, titanic_predictions)
+tree_rmse = np.sqrt(tree_mse)
+tree_rmse
