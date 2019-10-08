@@ -185,16 +185,21 @@ titanic_df_prepared = full_pipeline.fit_transform(titanic_df)
 titanic_df_prepared
 
 from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 lin_reg = LinearRegression()
+lin_reg = KNeighborsClassifier()
+lin_reg = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=1)
 lin_reg.fit(titanic_df_prepared, titanic_df_labels)
 
 # let's try the full preprocessing pipeline on a few training instances
-some_data = titanic_df.iloc[:5]
-some_labels = titanic_df_labels.iloc[:5]
+some_data = titanic_df
+some_labels = titanic_df_labels
 some_data_prepared = full_pipeline.transform(some_data)
+preds = lin_reg.predict(some_data_prepared)
 
-print("Predictions:", lin_reg.predict(some_data_prepared))
+print("Predictions:", preds)
 print("Labels:", list(some_labels))
 
 from sklearn.metrics import mean_squared_error
@@ -218,3 +223,53 @@ titanic_predictions = tree_reg.predict(titanic_df_prepared)
 tree_mse = mean_squared_error(titanic_df_labels, titanic_predictions)
 tree_rmse = np.sqrt(tree_mse)
 tree_rmse
+
+
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(tree_reg, titanic_df_prepared, titanic_df_labels,
+                         scoring="neg_mean_squared_error", cv=10)
+tree_rmse_scores = np.sqrt(-scores)
+def display_scores(scores):
+    print()
+    print("Scores:", scores)
+    print("Mean:", scores.mean())
+    print("Standard deviation:", scores.std())
+    print()
+
+display_scores(tree_rmse_scores)
+
+lin_scores = cross_val_score(lin_reg, titanic_df_prepared, titanic_df_labels,
+                             scoring="neg_mean_squared_error", cv=10)
+lin_rmse_scores = np.sqrt(-lin_scores)
+display_scores(lin_rmse_scores)
+
+from sklearn.ensemble import RandomForestRegressor
+
+forest_reg = RandomForestRegressor(n_estimators=100, random_state=42)
+forest_reg.fit(titanic_df_prepared, titanic_df_labels)
+
+titanic_predictions = forest_reg.predict(titanic_df_prepared)
+forest_mse = mean_squared_error(titanic_df_labels, titanic_predictions)
+forest_rmse = np.sqrt(forest_mse)
+print(forest_rmse)
+
+from sklearn.model_selection import cross_val_score
+
+forest_scores = cross_val_score(forest_reg, titanic_df_prepared, titanic_df_labels,
+                                scoring="neg_mean_squared_error", cv=10)
+forest_rmse_scores = np.sqrt(-forest_scores)
+display_scores(forest_rmse_scores)
+
+scores = cross_val_score(lin_reg, titanic_df_prepared, titanic_df_labels, scoring="neg_mean_squared_error", cv=10)
+pd.Series(np.sqrt(-scores)).describe()
+
+
+from sklearn.svm import SVR
+
+svm_reg = SVR(kernel="linear")
+svm_reg.fit(titanic_df_prepared, titanic_df_labels)
+titanic_predictions = svm_reg.predict(titanic_df_prepared)
+svm_mse = mean_squared_error(titanic_df_labels, titanic_predictions)
+svm_rmse = np.sqrt(svm_mse)
+print(svm_rmse)
