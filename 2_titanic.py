@@ -172,7 +172,7 @@ from sklearn.preprocessing import StandardScaler
 
 num_pipeline = Pipeline([
     ('imputer', SimpleImputer(strategy="median")),
-    ('attribs_adder', CombinedAttributesAdder(add_fare_per_sibspparch=True)),
+    ('attribs_adder', CombinedAttributesAdder()),
     ('std_scaler', StandardScaler()),
 ])
 
@@ -199,6 +199,8 @@ print(titanic_df_prepared)
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from scipy.stats import randint
 
 names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
@@ -207,7 +209,7 @@ names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
 classifiers = [
     KNeighborsClassifier(3),
     SVC(kernel="linear", C=0.025),
-    SVC(gamma=0.1, C=1),
+    # SVC(gamma=0.1, C=1),
     GaussianProcessClassifier(1.0 * RBF(1.0)),
     DecisionTreeClassifier(max_depth=5),
     RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
@@ -217,7 +219,128 @@ classifiers = [
     QuadraticDiscriminantAnalysis()
 ]
 
-for clf, name in zip(classifiers, names):
+algos_params = {
+    "Nearest Neighbors":
+        [
+            {
+                'algorithm': ['ball_tree', 'kd_tree', 'brute', 'auto'],
+                # 'leaf_size': 30,
+                'n_neighbors': np.arange(15, 20),
+                'p': [1, 2],
+                'weights': ['uniform', 'distance'],
+            },
+        ],
+    "Linear SVM":
+        [
+            {
+                'C': np.arange(0.1, 1.9, 0.1),
+                'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+                'degree': np.arange(1, 10),
+                'gamma': np.arange(0.0001, 0.1, 0.01),
+                'coef0': np.arange(0.0, 1.0, 0.1),
+                'shrinking': [True, False],
+                'decision_function_shape': ['ovo', 'ovr'],
+                'random_state': np.arange(2, 52, 10)
+            }
+        ],
+    "Gaussian Process":
+        [
+            {
+                'n_restarts_optimizer': np.arange(0, 10, 1),
+                'max_iter_predict': np.arange(90, 150, 10),
+                'warm_start': [True, False],
+                'random_state': np.arange(2, 52, 10),
+                'multi_class': ['one_vs_rest', 'one_vs_one']
+            }
+        ],
+    "Decision Tree":
+        [
+            {
+                'criterion': ["gini", 'entropy'],
+                'splitter': ["best", 'random'],
+                'max_depth': np.arange(0, 10, 2),
+                'min_samples_split': np.arange(1, 5, 1),
+                'min_samples_leaf': np.arange(1, 5, 1),
+                'min_weight_fraction_leaf': np.arange(0, 5, 1),
+                'max_features': np.arange(0, 5, 1),
+                'random_state': np.arange(2, 52, 10),
+                'max_leaf_nodes': [np.arange(0, 5, 1), None],
+                'min_impurity_decrease': np.arange(0, 5, 1),
+                'presort': [True, False],
+            }
+        ],
+    "Random Forest":
+        [
+            {
+                'n_estimators': np.arange(100, 1000, 100),
+                'criterion': ["gini", 'entropy'],
+                'max_depth': np.arange(0, 10, 2),
+                'min_samples_split': np.arange(1, 5, 1),
+                'min_samples_leaf': np.arange(1, 5, 1),
+                'min_weight_fraction_leaf': np.arange(0, 5, 1),
+                'max_features': np.arange(0, 5, 1),
+                'max_leaf_nodes': [np.arange(0, 5, 1), None],
+                'min_impurity_decrease': np.arange(0, 5, 1),
+                # min_impurity_split=None,
+                'bootstrap': [True, False],
+                'oob_score': [True, False],
+                'random_state': np.arange(2, 52, 10),
+                # verbose=0,
+                'warm_start': [True, False],
+                # class_weight=None
+            }
+        ],
+    "Neural Net":
+        [
+            {
+                'hidden_layer_sizes': [(100,), (200,), (300,)],
+                'activation': ["relu", 'identity', 'logistic', 'tanh'],
+                'solver': ['adam', 'lbfgs', 'sgd'],
+                'alpha': np.arange(0.0001, 0.1, 0.01),
+                # batch_size='auto',
+                'learning_rate': ["constant", 'invscaling', 'adaptive'],
+                'learning_rate_init': np.arange(0.001, 0.1, 0.01),
+                # power_t=0.5,
+                'max_iter': np.arange(200, 500, 50),
+                # shuffle=True,
+                'random_state': np.arange(2, 52, 10),
+                # 'tol': 1e-4,
+                # verbose=False, warm_start=False,
+                'momentum': np.arange(0.1, 1.0, 0.1),
+                # nesterovs_momentum=True, early_stopping=False,
+                # validation_fraction=0.1, beta_1=0.9, beta_2=0.999,
+                # epsilon=1e-8, n_iter_no_change=10):
+            }
+        ],
+    "AdaBoost":
+        [
+            {
+                # 'base_estimator':=None,
+                'n_estimators': np.arange(50, 500, 10),
+                'learning_rate': np.arange(1.0, 3.0, 0.2),
+                'algorithm': ['SAMME.R', 'SAMME'],
+                'random_state': np.arange(2, 52, 10),
+            }
+
+        ],
+    "Naive Bayes":
+        [
+            {
+
+            }
+        ],
+    "QDA":
+        [
+            {
+                # priors=None,
+                'reg_param': np.arange(0., 1., 0.2),
+                'store_covariance': [False, True],
+                # tol=1.0e-4, store_covariances=None
+            }
+        ],
+}
+
+for clf, name, (key, value) in zip(classifiers, names, algos_params.items()):
     clf.fit(titanic_df_prepared, titanic_df_labels)
 
     titanic_predictions = clf.predict(titanic_df_prepared)
@@ -244,8 +367,9 @@ for clf, name in zip(classifiers, names):
     # print("Labels_" + name + '_:', list(some_labels))
 
     clf_scores = cross_val_score(clf, titanic_df_prepared, titanic_df_labels,
-                             scoring="neg_mean_squared_error", cv=10)
+                                 scoring="neg_mean_squared_error", cv=10)
     clf_rmse_scores = np.sqrt(-clf_scores)
+
 
     def display_scores(scores):
         print('------_' + name + '_-------')
@@ -258,165 +382,40 @@ for clf, name in zip(classifiers, names):
         print()
         print()
 
+
     display_scores(clf_rmse_scores)
 
-sys.exit()
+    # param_grid = [
+    #     # try 12 (3×4) combinations of hyperparameters
+    #     {'n_estimators': [100, 200, 300, 400, 1000], 'max_features': [2, 4, 6, 8, 10]},
+    #     # then try 6 (2×3) combinations with bootstrap set as False
+    #     {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
+    # ]
 
+    clf_grid = clf
 
+    print(key)
+    print(value)
+    # train across 5 folds, that's a total of (12+6)*5=90 rounds of training
+    grid_search = GridSearchCV(clf_grid, value, cv=5,
+                               scoring='neg_mean_squared_error',
+                               return_train_score=True)
+    grid_search.fit(titanic_df_prepared, titanic_df_labels)
 
-# lin_reg = SVC(degree=15, kernel='rbf', gamma=0.1)
+    print('--------------------------best parameter found-----------------------------')
+    print(grid_search.best_params_)
+    print(grid_search.best_estimator_)
 
-# kneigh = KNeighborsClassifier()
-# randomForest = RandomForestClassifier(n_estimators=200, max_depth=10, random_state=1)
-# rfreg = RandomForestRegressor(n_estimators=200, random_state=42)
-# rfreg.fit(titanic_df_prepared, titanic_df_labels)
-# svc_class = SVC(kernel='linear')
-# svc_class.fit(titanic_df_prepared, titanic_df_labels)
-#
-#
-# randomForest.fit(titanic_df_prepared, titanic_df_labels)
-#
-# # let's try the full preprocessing pipeline on a few training instances
-# some_data = titanic_df
-# some_labels = titanic_df_labels
-# some_data_prepared = full_pipeline.transform(some_data)
-# preds = randomForest.predict(some_data_prepared)
-#
-# print("Predictions:", preds)
-# print("Labels:", list(some_labels))
-#
-# from sklearn.metrics import mean_squared_error
-#
-# titanic_preds = svc_class.predict(titanic_df_prepared)
-# svm_mse = mean_squared_error(titanic_df_labels, titanic_preds)
-# svm_rmse = np.sqrt(svm_mse)
-# svm_rmse
-#
-# titanic_preds = rfreg.predict(titanic_df_prepared)
-# forest_mse = mean_squared_error(titanic_df_labels, titanic_preds)
-# forest_rmse = np.sqrt(forest_mse)
-# forest_rmse
-#
-# housing_predictions = randomForest.predict(titanic_df_prepared)
-# lin_mse = mean_squared_error(titanic_df_labels, housing_predictions)
-# lin_rmse = np.sqrt(lin_mse)
-# lin_rmse
-#
-# from sklearn.metrics import mean_absolute_error
-#
-# lin_mae = mean_absolute_error(titanic_df_labels, housing_predictions)
-# lin_mae
-#
-# from sklearn.tree import DecisionTreeRegressor
-#
-# tree_reg = DecisionTreeRegressor(random_state=42)
-# tree_reg.fit(titanic_df_prepared, titanic_df_labels)
-#
-# titanic_predictions = tree_reg.predict(titanic_df_prepared)
-# tree_mse = mean_squared_error(titanic_df_labels, titanic_predictions)
-# tree_rmse = np.sqrt(tree_mse)
-# tree_rmse
-#
-from sklearn.model_selection import cross_val_score
+    cvres = grid_search.cv_results_
+    for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
+        print(np.sqrt(-mean_score), params)
 
-#
-# tree_scores = cross_val_score(tree_reg, titanic_df_prepared, titanic_df_labels,
-#                          scoring="neg_mean_squared_error", cv=10)
-# treereg_rmse_scores = np.sqrt(-tree_scores)
-#
-# def display_scores(scores):
-#     print('------treereg----------')
-#     print("Scores:", scores)
-#     print("Mean:", scores.mean())
-#     print("Standard deviation:", scores.std())
-#     print('----------------')
-#
-# display_scores(treereg_rmse_scores)
-#
-# ran_scores = cross_val_score(randomForest, titanic_df_prepared, titanic_df_labels,
-#                          scoring="neg_mean_squared_error", cv=10)
-# randomForest_rmse_scores = np.sqrt(-ran_scores)
-#
-# def display_scores(scores):
-#     print('------randomForest----------')
-#     print("Scores:", scores)
-#     print("Mean:", scores.mean())
-#     print("Standard deviation:", scores.std())
-#     print('----------------')
-#
-# display_scores(randomForest_rmse_scores)
-#
-linreg_scores = cross_val_score(lin_reg, titanic_df_prepared, titanic_df_labels,
-                                scoring="neg_mean_squared_error", cv=10)
-lin_reg_rmse_scores = np.sqrt(-linreg_scores)
+    grid_results = pd.DataFrame(grid_search.cv_results_)
+    grid_results.sort_values('rank_test_score', inplace=True)
+    grid_results.to_csv(key + '_results.csv')
+    print(grid_results)
+    # sys.exit()
 
-
-def display_scores(scores):
-    print('------lin_reg----------')
-    print("Scores:", scores)
-    print("Mean:", scores.mean())
-    print("Standard deviation:", scores.std())
-    print('----------------')
-
-
-display_scores(lin_reg_rmse_scores)
-# sys.exit()
-#
-# rfreg_scores = cross_val_score(rfreg, titanic_df_prepared, titanic_df_labels,
-#                          scoring="neg_mean_squared_error", cv=10)
-# rfreg_rmse_scores = np.sqrt(-rfreg_scores)
-#
-# def display_scores(scores):
-#     print('------rfreg----------')
-#     print("Scores:", scores)
-#     print("Mean:", scores.mean())
-#     print("Standard deviation:", scores.std())
-#     print('----------------')
-#
-# display_scores(rfreg_rmse_scores)
-#
-# svc_scores = cross_val_score(svc_class, titanic_df_prepared, titanic_df_labels,
-#                          scoring="neg_mean_squared_error", cv=10)
-# svc_rmse_scores = np.sqrt(-svc_scores)
-#
-# def display_scores(scores):
-#     print('------svc_class----------')
-#     print("Scores:", scores)
-#     print("Mean:", scores.mean())
-#     print("Standard deviation:", scores.std())
-#     print('----------------')
-#
-# display_scores(svc_rmse_scores)
-
-
-# from sklearn.model_selection import GridSearchCV
-#
-# param_grid = [
-#     # try 12 (3×4) combinations of hyperparameters
-#     {'n_estimators': [100, 200, 300, 400, 1000], 'max_features': [2, 4, 6, 8, 10]},
-#     # then try 6 (2×3) combinations with bootstrap set as False
-#     {'bootstrap': [False], 'n_estimators': [3, 10], 'max_features': [2, 3, 4]},
-# ]
-#
-# forest_reg = RandomForestClassifier(random_state=42)
-# # train across 5 folds, that's a total of (12+6)*5=90 rounds of training
-# grid_search = GridSearchCV(forest_reg, param_grid, cv=5,
-#                            scoring='neg_mean_squared_error',
-#                            return_train_score=True)
-# grid_search.fit(titanic_df_prepared, titanic_df_labels)
-#
-# print('best parameter found')
-# print(grid_search.best_params_)
-# print(grid_search.best_estimator_)
-#
-# cvres = grid_search.cv_results_
-# for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
-#     print(np.sqrt(-mean_score), params)
-#
-# pd.DataFrame(grid_search.cv_results_)
-
-# from sklearn.model_selection import RandomizedSearchCV
-# from scipy.stats import randint
 #
 # param_distribs = {
 #     # 'C': randint(0.001, 5.0),
