@@ -414,7 +414,7 @@ for clf, name, (key, value) in zip(classifiers, names, algos_params.items()):
     grid_results.sort_values('rank_test_score', inplace=True)
     grid_results.to_csv(key + '_results.csv')
     print(grid_results)
-    # sys.exit()
+sys.exit()
 
 #
 # param_distribs = {
