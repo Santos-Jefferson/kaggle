@@ -208,7 +208,7 @@ names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
 
 classifiers = [
     KNeighborsClassifier(3),
-    SVC(kernel="linear", C=0.025),
+    SVC(verbose=True),
     # SVC(gamma=0.1, C=1),
     GaussianProcessClassifier(1.0 * RBF(1.0)),
     DecisionTreeClassifier(max_depth=5),
@@ -233,14 +233,15 @@ algos_params = {
     "Linear SVM":
         [
             {
-                'C': np.arange(0.1, 1.9, 0.1),
+                'C': np.arange(1.0, 1.9, 0.3),
                 'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-                'degree': np.arange(1, 10),
-                'gamma': np.arange(0.0001, 0.1, 0.01),
+                'degree': np.arange(2, 6, 1),
+                'gamma': np.arange(0.001, 0.1, 0.01),
                 'coef0': np.arange(0.0, 1.0, 0.1),
                 'shrinking': [True, False],
                 'decision_function_shape': ['ovo', 'ovr'],
-                'random_state': np.arange(2, 52, 10)
+                'random_state': np.arange(12, 52, 20),
+                # 'verbose': True
             }
         ],
     "Gaussian Process":
