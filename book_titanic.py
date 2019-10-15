@@ -27,11 +27,11 @@ names = [
 
 classifiers = [
     # KNeighborsClassifier(3),
-    # SVC(verbose=False),
+    SVC(verbose=True, random_state=42),
     # SVC(gamma=0.1, C=1),
     # GaussianProcessClassifier(1.0 * RBF(1.0)),
     # DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(verbose=1, n_jobs=-1),
+    RandomForestClassifier(verbose=1, n_jobs=-1, random_state=42),
     # MLPClassifier(alpha=1, max_iter=1000),
     # AdaBoostClassifier(),
     # GaussianNB(),
@@ -49,20 +49,20 @@ algos_params = {
     #             'weights': ['uniform', 'distance'],
     #         },
     #     ],
-    # "Linear SVM":
-    #     [
-    #         {
-    #             'C': np.arange(1.0, 1.9, 0.3),
-    #             'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-    #             'degree': np.arange(2, 6, 1),
-    #             'gamma': np.arange(0.001, 0.1, 0.01),
-    #             'coef0': np.arange(0.0, 1.0, 0.1),
-    #             'shrinking': [True, False],
-    #             'decision_function_shape': ['ovo', 'ovr'],
-    #             'random_state': np.arange(12, 52, 20),
-    #             # 'verbose': True
-    #         }
-    #     ],
+    "Linear SVM":
+        [
+            {
+                'C': np.arange(1.0, 1.9, 0.3),
+                'kernel': ['poly', 'rbf', 'sigmoid'],
+                'degree': np.arange(3, 6, 1),
+                'gamma': np.arange(0.001, 0.009, 0.002),
+                # 'coef0': np.arange(0.0, 1.0, 0.1),
+                # 'shrinking': [True, False],
+                # 'decision_function_shape': ['ovo', 'ovr'],
+                # 'random_state': np.arange(12, 52, 20),
+                # 'verbose': True
+            }
+        ],
     # "Gaussian Process":
     #     [
     #         {
@@ -92,19 +92,19 @@ algos_params = {
     "Random Forest":
         [
             {
-                'n_estimators': np.arange(100, 10000, 100),
+                'n_estimators': np.arange(100, 10000, 200),
                 'criterion': ['gini', 'entropy'],
                 # 'max_depth': np.arange(1, 10, 1),
-                'min_samples_split': np.arange(2, 10, 1),
-                'min_samples_leaf': np.arange(1, 6, 1),
+                # 'min_samples_split': np.arange(2, 10, 1),
+                # 'min_samples_leaf': np.arange(1, 6, 1),
                 # 'min_weight_fraction_leaf': np.arange(0, 3, 1),
-                # 'max_features': np.arange(2, 20, 3),
+                'max_features': np.arange(2, 10, 2),
                 # 'max_leaf_nodes': [None, np.arange(0, 2, 1)],
                 # 'min_impurity_decrease': np.arange(0., 1., 0.3),
                 # min_impurity_split=None,
                 # 'bootstrap': [True, False],
                 # 'oob_score': [True, False],
-                'random_state': np.arange(2, 1002, 20),
+                # 'random_state': np.arange(2, 1002, 20),
                 # 'verbose': [1],
                 # 'warm_start': [True, False],
                 # 'njobs': []
@@ -249,11 +249,12 @@ y_train = train_data["Survived"]
 print(y_train)
 
 toplot = []
+best_estimators = []
 
 for clf, name, (key, value) in zip(classifiers, names, algos_params.items()):
     clf.fit(X_train, y_train)
 
-    grid_search = GridSearchCV(clf, value, cv=5,
+    grid_search = GridSearchCV(clf, value, cv=5,/
                                scoring='neg_mean_squared_error',
                                return_train_score=True)
     grid_search.fit(X_train, y_train)
@@ -269,12 +270,15 @@ for clf, name, (key, value) in zip(classifiers, names, algos_params.items()):
     grid_results = pd.DataFrame(grid_search.cv_results_)
     grid_results.sort_values('rank_test_score', inplace=True)
     grid_results.to_csv(key + '_results.csv')
+    best_estimators.append(name)
+    best_estimators.append(grid_search.best_params_)
+    best_estimators.append(grid_search.best_estimator_)
     print(grid_results)
-
-final_model = grid_search.best_estimator_
-X_test = preprocess_pipeline.transform(test_data)
-final_predictions = final_model.predict(X_test)
-generate_submission_file(test_data, final_predictions, 'finalSub.csv')
+print(best_estimators)
+# final_model = grid_search.best_estimator_
+# X_test = preprocess_pipeline.transform(test_data)
+# final_predictions = final_model.predict(X_test)
+# generate_submission_file(test_data, final_predictions, 'finalSub.csv')
 
 #     y_pred = clf.predict(X_test)
 #     clf_scores = cross_val_score(clf, X_train, y_train, cv=10)

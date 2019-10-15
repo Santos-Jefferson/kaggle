@@ -252,19 +252,19 @@ toplot = []
 
 from sklearn.ensemble import RandomForestClassifier
 
-clf = RandomForestClassifier(n_estimators=2000, random_state=42)
+clf = RandomForestClassifier(criterion='gini', max_features=6, n_estimators=2700)
 clf.fit(X_train, y_train)
 forest_scores = cross_val_score(clf, X_train, y_train, cv=10)
 print(forest_scores.mean())
-# X_test = preprocess_pipeline.transform(test_data)
+X_test = preprocess_pipeline.transform(test_data)
 #
-# y_pred = clf.predict(X_test)
+y_pred = clf.predict(X_test)
 # clf_scores = cross_val_score(clf, X_train, y_train, cv=10)
 # print('---rf---')
 # print(clf_scores.mean())
 # print()
 # toplot.append(clf_scores)
-# generate_submission_file(test_data, y_pred, 'rf_test.csv')
+generate_submission_file(test_data, y_pred, 'rf_test4.csv')
 # plt.figure(figsize=(8, 4))
 # plt.plot([1] * 10, clf_scores, ".")
 # # plt.plot([2]*10, clf_scores, ".")
