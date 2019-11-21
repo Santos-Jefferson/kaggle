@@ -17,10 +17,11 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 
 names = [
-    # "Nearest Neighbors", "Linear SVM", "RBF SVM",
+    # "Nearest Neighbors",
+    "Linear SVM", "RBF SVM",
     # "Gaussian Process",
     # "Decision Tree",
-    "Random Forest",
+    # "Random Forest",
     # "Neural Net", "AdaBoost",
     # "Naive Bayes", "QDA"
 ]
@@ -31,7 +32,7 @@ classifiers = [
     # SVC(gamma=0.1, C=1),
     # GaussianProcessClassifier(1.0 * RBF(1.0)),
     # DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(verbose=1, n_jobs=-1, random_state=42),
+    # RandomForestClassifier(verbose=1, n_jobs=-1, random_state=42),
     # MLPClassifier(alpha=1, max_iter=1000),
     # AdaBoostClassifier(),
     # GaussianNB(),
@@ -52,10 +53,10 @@ algos_params = {
     "Linear SVM":
         [
             {
-                'C': np.arange(1.0, 1.9, 0.3),
-                'kernel': ['poly', 'rbf', 'sigmoid'],
-                'degree': np.arange(3, 6, 1),
-                'gamma': np.arange(0.001, 0.009, 0.002),
+                'C': np.arange(1.0, 30.0, 1.0),
+                # 'kernel': ['poly', 'rbf'],
+                # 'degree': np.arange(3, 5, 1),
+                'gamma': np.arange(0.00001, 0.9, 0.0001),
                 # 'coef0': np.arange(0.0, 1.0, 0.1),
                 # 'shrinking': [True, False],
                 # 'decision_function_shape': ['ovo', 'ovr'],
@@ -89,28 +90,28 @@ algos_params = {
     #             'presort': [True, False],
     #         }
     #     ],
-    "Random Forest":
-        [
-            {
-                'n_estimators': np.arange(100, 10000, 200),
-                'criterion': ['gini', 'entropy'],
-                # 'max_depth': np.arange(1, 10, 1),
-                # 'min_samples_split': np.arange(2, 10, 1),
-                # 'min_samples_leaf': np.arange(1, 6, 1),
-                # 'min_weight_fraction_leaf': np.arange(0, 3, 1),
-                'max_features': np.arange(2, 10, 2),
-                # 'max_leaf_nodes': [None, np.arange(0, 2, 1)],
-                # 'min_impurity_decrease': np.arange(0., 1., 0.3),
-                # min_impurity_split=None,
-                # 'bootstrap': [True, False],
-                # 'oob_score': [True, False],
-                # 'random_state': np.arange(2, 1002, 20),
-                # 'verbose': [1],
-                # 'warm_start': [True, False],
-                # 'njobs': []
-                # class_weight=None
-            }
-        ],
+    # "Random Forest":
+    #     [
+    #         {
+    #             'n_estimators': np.arange(100, 10000, 200),
+    #             'criterion': ['gini', 'entropy'],
+    #             # 'max_depth': np.arange(1, 10, 1),
+    #             # 'min_samples_split': np.arange(2, 10, 1),
+    #             # 'min_samples_leaf': np.arange(1, 6, 1),
+    #             # 'min_weight_fraction_leaf': np.arange(0, 3, 1),
+    #             'max_features': np.arange(2, 10, 2),
+    #             # 'max_leaf_nodes': [None, np.arange(0, 2, 1)],
+    #             # 'min_impurity_decrease': np.arange(0., 1., 0.3),
+    #             # min_impurity_split=None,
+    #             # 'bootstrap': [True, False],
+    #             # 'oob_score': [True, False],
+    #             # 'random_state': np.arange(2, 1002, 20),
+    #             # 'verbose': [1],
+    #             # 'warm_start': [True, False],
+    #             # 'njobs': []
+    #             # class_weight=None
+    #         }
+    #     ],
     # "Neural Net":
     #     [
     #         {
@@ -254,7 +255,7 @@ best_estimators = []
 for clf, name, (key, value) in zip(classifiers, names, algos_params.items()):
     clf.fit(X_train, y_train)
 
-    grid_search = GridSearchCV(clf, value, cv=5,/
+    grid_search = GridSearchCV(clf, value, cv=5,
                                scoring='neg_mean_squared_error',
                                return_train_score=True)
     grid_search.fit(X_train, y_train)

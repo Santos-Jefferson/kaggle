@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, cross_val_predict
 from pandas.plotting import scatter_matrix
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -17,21 +17,23 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 
 names = [
-    # "Nearest Neighbors", "Linear SVM", "RBF SVM",
+    # "Nearest Neighbors",
+    "Linear SVM",
+    # "RBF SVM",
     # "Gaussian Process",
     # "Decision Tree",
-    "Random Forest",
+    # "Random Forest",
     # "Neural Net", "AdaBoost",
     # "Naive Bayes", "QDA"
 ]
 
 classifiers = [
     # KNeighborsClassifier(3),
-    # SVC(verbose=False),
+    SVC(verbose=False),
     # SVC(gamma=0.1, C=1),
     # GaussianProcessClassifier(1.0 * RBF(1.0)),
     # DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(random_state=42, verbose=1, n_jobs=-1),
+    # RandomForestClassifier(random_state=42, verbose=1, n_jobs=-1),
     # MLPClassifier(alpha=1, max_iter=1000),
     # AdaBoostClassifier(),
     # GaussianNB(),
@@ -252,19 +254,121 @@ toplot = []
 
 from sklearn.ensemble import RandomForestClassifier
 
-clf = RandomForestClassifier(criterion='gini', max_features=6, n_estimators=2700)
+clf = SVC(C=28.199999999999996, gamma=0.004)
 clf.fit(X_train, y_train)
 forest_scores = cross_val_score(clf, X_train, y_train, cv=10)
+y_train_pred = cross_val_predict(clf, X_train, y_train, cv=3)
 print(forest_scores.mean())
 X_test = preprocess_pipeline.transform(test_data)
 #
 y_pred = clf.predict(X_test)
+
+from sklearn.metrics import confusion_matrix
+conf_matrix = confusion_matrix(y_train, y_train_pred)
+print(conf_matrix)
+
+from sklearn.metrics import precision_score, recall_score
+
+precision = precision_score(y_train, y_train_pred)
+recall = recall_score(y_train, y_train_pred)
+print('precision')
+print(precision)
+print('recall')
+print(recall)
+
+from sklearn.metrics import f1_score
+
+f1_score = f1_score(y_train, y_train_pred)
+print('f1')
+print(f1_score)
+
+y_scores = cross_val_predict(clf, X_train, y_train, cv=3,
+                             method="decision_function")
+
+from sklearn.metrics import precision_recall_curve
+
+precisions, recalls, thresholds = precision_recall_curve(y_train, y_scores)
+
+def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
+    plt.plot(thresholds, precisions[:-1], "b--", label="Precision", linewidth=2)
+    plt.plot(thresholds, recalls[:-1], "g-", label="Recall", linewidth=2)
+    plt.legend(loc="center right", fontsize=16) # Not shown in the book
+    plt.xlabel("Threshold", fontsize=16)        # Not shown
+    plt.grid(True)                              # Not shown
+    plt.axis([-50000, 50000, 0, 1])             # Not shown
+
+plt.figure(figsize=(8, 4))                      # Not shown
+plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
+plt.plot([7813, 7813], [0., 0.9], "r:")         # Not shown
+plt.plot([-50000, 7813], [0.9, 0.9], "r:")      # Not shown
+plt.plot([-50000, 7813], [0.4368, 0.4368], "r:")# Not shown
+plt.plot([7813], [0.9], "ro")                   # Not shown
+plt.plot([7813], [0.4368], "ro")                # Not shown
+# save_fig("precision_recall_vs_threshold_plot")  # Not shown
+plt.show()
+
+def plot_precision_vs_recall(precisions, recalls):
+    plt.plot(recalls, precisions, "b-", linewidth=2)
+    plt.xlabel("Recall", fontsize=16)
+    plt.ylabel("Precision", fontsize=16)
+    plt.axis([0, 1, 0, 1])
+    plt.grid(True)
+
+plt.figure(figsize=(8, 6))
+plot_precision_vs_recall(precisions, recalls)
+plt.plot([0.4368, 0.4368], [0., 0.9], "r:")
+plt.plot([0.0, 0.4368], [0.9, 0.9], "r:")
+plt.plot([0.4368], [0.9], "ro")
+# save_fig("precision_vs_recall_plot")
+plt.show()
+
+from sklearn.metrics import roc_curve
+
+fpr, tpr, thresholds = roc_curve(y_train, y_scores)
+
+def plot_roc_curve(fpr, tpr, label=None):
+    plt.plot(fpr, tpr, linewidth=2, label=label)
+    plt.plot([0, 1], [0, 1], 'k--') # dashed diagonal
+    plt.axis([0, 1, 0, 1])                                    # Not shown in the book
+    plt.xlabel('False Positive Rate (Fall-Out)', fontsize=16) # Not shown
+    plt.ylabel('True Positive Rate (Recall)', fontsize=16)    # Not shown
+    plt.grid(True)                                            # Not shown
+
+plt.figure(figsize=(8, 6))                         # Not shown
+plot_roc_curve(fpr, tpr)
+plt.plot([4.837e-3, 4.837e-3], [0., 0.4368], "r:") # Not shown
+plt.plot([0.0, 4.837e-3], [0.4368, 0.4368], "r:")  # Not shown
+plt.plot([4.837e-3], [0.4368], "ro")               # Not shown
+# save_fig("roc_curve_plot")                         # Not shown
+plt.show()
+
+from sklearn.ensemble import RandomForestClassifier
+forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+y_probas_forest = cross_val_predict(forest_clf, X_train, y_train, cv=3,
+                                    method="predict_proba")
+
+y_scores_forest = y_probas_forest[:, 1] # score = proba of positive class
+fpr_forest, tpr_forest, thresholds_forest = roc_curve(y_train,y_scores_forest)
+
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, "b:", linewidth=2, label="SGD")
+plot_roc_curve(fpr_forest, tpr_forest, "Random Forest")
+plt.plot([4.837e-3, 4.837e-3], [0., 0.4368], "r:")
+plt.plot([0.0, 4.837e-3], [0.4368, 0.4368], "r:")
+plt.plot([4.837e-3], [0.4368], "ro")
+plt.plot([4.837e-3, 4.837e-3], [0., 0.9487], "r:")
+plt.plot([4.837e-3], [0.9487], "ro")
+plt.grid(True)
+plt.legend(loc="lower right", fontsize=16)
+# save_fig("roc_curve_comparison_plot")
+plt.show()
+
 # clf_scores = cross_val_score(clf, X_train, y_train, cv=10)
 # print('---rf---')
 # print(clf_scores.mean())
 # print()
 # toplot.append(clf_scores)
-generate_submission_file(test_data, y_pred, 'rf_test4.csv')
+generate_submission_file(test_data, y_pred, 'rf_test5.csv')
 # plt.figure(figsize=(8, 4))
 # plt.plot([1] * 10, clf_scores, ".")
 # # plt.plot([2]*10, clf_scores, ".")
