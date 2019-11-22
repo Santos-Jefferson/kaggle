@@ -50,7 +50,7 @@ plt.imshow(some_digit_image, cmap=mpl.cm.binary)
 plt.axis("off")
 
 save_fig("some_digit_plot")
-plt.show()
+# plt.show()
 
 y = y.astype(np.uint8)
 
@@ -81,7 +81,7 @@ plt.figure(figsize=(9,9))
 example_images = X[:100]
 plot_digits(example_images, images_per_row=10)
 save_fig("more_digits_plot")
-plt.show()
+# plt.show()
 
 X_train, X_test, y_train, y_test = X[:60000], X[60000:], y[:60000], y[60000:]
 y_train_5 = (y_train == 5)
@@ -120,3 +120,80 @@ class Never5Classifier(BaseEstimator):
         pass
     def predict(self, X):
         return np.zeros((len(X), 1), dtype=bool)
+
+never_5_clf = Never5Classifier()
+print(cross_val_score(never_5_clf, X_train, y_train_5, cv=3, scoring="accuracy"))
+
+
+from sklearn.model_selection import cross_val_predict
+y_train_pred = cross_val_predict(sgd_clf, X_train, y_train_5, cv=3)
+
+from sklearn.metrics import confusion_matrix
+print(confusion_matrix(y_train_5, y_train_pred))
+
+
+y_train_perfect_predictions = y_train_5  # pretend we reached perfection
+print(confusion_matrix(y_train_5, y_train_perfect_predictions))
+
+from sklearn.metrics import precision_score, recall_score
+
+print(precision_score(y_train_5, y_train_pred))
+print(recall_score(y_train_5, y_train_pred))
+
+from sklearn.metrics import f1_score
+
+print(f1_score(y_train_5, y_train_pred))
+
+y_scores = sgd_clf.decision_function([some_digit])
+print(y_scores)
+
+threshold = 0
+y_some_digit_pred = (y_scores > threshold)
+print(y_some_digit_pred)
+
+threshold = 8000
+y_some_digit_pred = (y_scores > threshold)
+print(y_some_digit_pred)
+
+y_scores = cross_val_predict(sgd_clf, X_train, y_train_5, cv=3,
+                             method="decision_function")
+
+from sklearn.metrics import precision_recall_curve
+
+precisions, recalls, thresholds = precision_recall_curve(y_train_5, y_scores)
+print(precisions, recalls, thresholds)
+
+def plot_precision_recall_vs_threshold(precisions, recalls, thresholds):
+    plt.plot(thresholds, precisions[:-1], "b--", label="Precision", linewidth=2)
+    plt.plot(thresholds, recalls[:-1], "g-", label="Recall", linewidth=2)
+    plt.legend(loc="center right", fontsize=16) # Not shown in the book
+    plt.xlabel("Threshold", fontsize=16)        # Not shown
+    plt.grid(True)                              # Not shown
+    plt.axis([-50000, 50000, 0, 1])             # Not shown
+
+plt.figure(figsize=(8, 4))                      # Not shown
+plot_precision_recall_vs_threshold(precisions, recalls, thresholds)
+plt.plot([7813, 7813], [0., 0.9], "r:")         # Not shown
+plt.plot([-50000, 7813], [0.9, 0.9], "r:")      # Not shown
+plt.plot([-50000, 7813], [0.4368, 0.4368], "r:")# Not shown
+plt.plot([7813], [0.9], "ro")                   # Not shown
+plt.plot([7813], [0.4368], "ro")                # Not shown
+save_fig("precision_recall_vs_threshold_plot")  # Not shown
+plt.show()
+
+print((y_train_pred == (y_scores > 0)).all())
+
+def plot_precision_vs_recall(precisions, recalls):
+    plt.plot(recalls, precisions, "b-", linewidth=2)
+    plt.xlabel("Recall", fontsize=16)
+    plt.ylabel("Precision", fontsize=16)
+    plt.axis([0, 1, 0, 1])
+    plt.grid(True)
+
+plt.figure(figsize=(8, 6))
+plot_precision_vs_recall(precisions, recalls)
+plt.plot([0.4368, 0.4368], [0., 0.9], "r:")
+plt.plot([0.0, 0.4368], [0.9, 0.9], "r:")
+plt.plot([0.4368], [0.9], "ro")
+save_fig("precision_vs_recall_plot")
+plt.show()
